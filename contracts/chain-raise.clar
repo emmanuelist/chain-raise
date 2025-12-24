@@ -207,3 +207,36 @@
     (ok true)
   )
 )
+
+;; Donate sBTC. Pass amount in Satoshis.
+(define-public (donate-sbtc (amount uint))
+  (begin
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-cancelled)) err-campaign-cancelled)
+    (asserts! (not (var-get is-paused)) err-paused)
+    (asserts! (>= amount (var-get min-donation-sbtc)) err-donation-too-small)
+    (asserts! (<= amount (var-get max-donation-sbtc)) err-donation-too-large)
+    (asserts!
+      (< burn-block-height
+        (+ (var-get campaign-start) (var-get campaign-duration))
+      )
+      err-campaign-ended
+    )
+    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+      transfer amount contract-caller (as-contract tx-sender) none
+    ))
+    (map-set sbtc-donations tx-sender
+      (+ (default-to u0 (map-get? sbtc-donations tx-sender)) amount)
+    )
+    (var-set total-sbtc (+ (var-get total-sbtc) amount))
+    (var-set donation-count (+ (var-get donation-count) u1))
+    (print {
+      event: "donation-sbtc",
+      donor: tx-sender,
+      amount: amount,
+      total: (var-get total-sbtc),
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
