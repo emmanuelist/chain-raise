@@ -557,3 +557,60 @@ describe("Chain Raise Smart Contract Tests", () => {
       expect(result).toBeErr(Cl.uint(113)); // err-invalid-percentage
     });
   });
+
+  describe("Time-Based Refunds", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(100000000), // 100 STX goal
+          Cl.uint(100), // Short duration for testing
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("allows refund when goal not met and campaign ended", () => {
+      // Donate less than goal
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)], // 50 STX (less than 100 STX goal)
+        wallet1
+      );
+
+      // Wait for campaign to end
+      simnet.mineEmptyBlocks(101);
+
+      // Refund should work
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "refund",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("allows refund when campaign cancelled", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+
+      simnet.callPublicFn("chain-raise", "cancel-campaign", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "refund",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
