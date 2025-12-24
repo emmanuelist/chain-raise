@@ -648,3 +648,48 @@ describe("Chain Raise Smart Contract Tests", () => {
         deployer
       );
     });
+
+    it("allows owner to cancel campaign", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "cancel-campaign",
+        [],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("allows withdrawal when campaign ended", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+      simnet.mineEmptyBlocks(101);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw",
+        [],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("prevents withdrawal before campaign ends", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw",
+        [],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(104)); // err-campaign-not-ended
+    });
