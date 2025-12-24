@@ -198,3 +198,60 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(110)); // err-donation-too-large
     });
+
+    it("accepts valid donation amount", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)], // 5 STX
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("allows owner to update donation limits", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "set-donation-limits",
+        [
+          Cl.uint(2000000), // 2 STX min
+          Cl.uint(50000000000), // 50,000 STX max
+          Cl.uint(20000), // sBTC min
+          Cl.uint(500000000) // sBTC max
+        ],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+
+      // Verify limits were updated
+      const limits = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-donation-limits",
+        [],
+        deployer
+      );
+      expect(limits.result).toBeOk(
+        Cl.tuple({
+          "min-stx": Cl.uint(2000000),
+          "max-stx": Cl.uint(50000000000),
+          "min-sbtc": Cl.uint(20000),
+          "max-sbtc": Cl.uint(500000000)
+        })
+      );
+    });
+
+    it("rejects invalid limit ranges", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "set-donation-limits",
+        [
+          Cl.uint(5000000), // min > max
+          Cl.uint(1000000),
+          Cl.uint(10000),
+          Cl.uint(500000000)
+        ],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(113)); // err-invalid-percentage
+    });
+  });
