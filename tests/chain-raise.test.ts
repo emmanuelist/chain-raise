@@ -255,3 +255,61 @@ describe("Chain Raise Smart Contract Tests", () => {
       expect(result).toBeErr(Cl.uint(113)); // err-invalid-percentage
     });
   });
+
+  describe("Donations", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(50000000), // 50 STX goal
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("accepts STX donations", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(10000000)], // 10 STX
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+
+      // Check donation recorded
+      const donation = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-stx-donation",
+        [Cl.principal(wallet1)],
+        deployer
+      );
+      expect(donation.result).toBeOk(Cl.uint(10000000));
+    });
+
+    it("accumulates multiple donations from same donor", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)],
+        wallet1
+      );
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(3000000)],
+        wallet1
+      );
+
+      const donation = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-stx-donation",
+        [Cl.principal(wallet1)],
+        deployer
+      );
+      expect(donation.result).toBeOk(Cl.uint(8000000));
+    });
