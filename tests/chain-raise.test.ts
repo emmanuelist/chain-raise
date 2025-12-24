@@ -54,3 +54,32 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(100)); // err-not-authorized
     });
+
+    it("prevents double initialization", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(1000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(2000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test2"),
+          Cl.stringUtf8("Test2"),
+          Cl.stringAscii("Test2")
+        ],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(106)); // err-already-initialized
+    });
