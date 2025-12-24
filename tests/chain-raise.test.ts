@@ -512,3 +512,48 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(107)); // err-already-withdrawn
     });
+
+    it("allows adding multiple beneficiaries", () => {
+      const result1 = simnet.callPublicFn(
+        "chain-raise",
+        "add-beneficiary",
+        [Cl.principal(wallet1), Cl.uint(5000)], // 50%
+        deployer
+      );
+      expect(result1.result).toBeOk(Cl.uint(0));
+
+      const result2 = simnet.callPublicFn(
+        "chain-raise",
+        "add-beneficiary",
+        [Cl.principal(wallet2), Cl.uint(5000)], // 50%
+        deployer
+      );
+      expect(result2.result).toBeOk(Cl.uint(1));
+
+      // Verify beneficiaries
+      const ben1 = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-beneficiary",
+        [Cl.uint(0)],
+        deployer
+      );
+      expect(ben1.result).toBeOk(
+        Cl.some(
+          Cl.tuple({
+            address: Cl.principal(wallet1),
+            percentage: Cl.uint(5000)
+          })
+        )
+      );
+    });
+
+    it("validates percentage range", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "add-beneficiary",
+        [Cl.principal(wallet1), Cl.uint(15000)], // > 100%
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(113)); // err-invalid-percentage
+    });
+  });
