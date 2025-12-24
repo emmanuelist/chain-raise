@@ -614,3 +614,37 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeOk(Cl.bool(true));
     });
+
+    it("prevents refund when campaign active", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "refund",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(103)); // err-not-cancelled
+    });
+  });
+
+  describe("Campaign Cancellation and Withdrawal", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(50000000),
+          Cl.uint(100),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
