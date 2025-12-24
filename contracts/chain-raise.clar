@@ -65,3 +65,32 @@
 (define-data-var campaign-category (string-ascii 50) "")
 (define-data-var beneficiary-count uint u0)
 (define-data-var milestone-count uint u0)
+
+;; Maps
+(define-map stx-donations
+  principal
+  uint
+) ;; donor -> amount
+(define-map sbtc-donations
+  principal
+  uint
+) ;; donor -> amount
+
+;; Milestones: milestone-id -> {amount, description, withdrawn}
+(define-map milestones
+  uint
+  {
+    amount: uint,
+    description: (string-utf8 200),
+    withdrawn: bool
+  }
+)
+
+;; Multiple beneficiaries: beneficiary-id -> {address, percentage}
+(define-map beneficiaries
+  uint
+  {
+    address: principal,
+    percentage: uint ;; out of 10000 (100.00%)
+  }
+)
