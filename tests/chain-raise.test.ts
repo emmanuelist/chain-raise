@@ -138,3 +138,63 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(108)); // err-paused
     });
+
+    it("allows donations after unpause", () => {
+      simnet.callPublicFn("chain-raise", "pause-campaign", [], deployer);
+      simnet.callPublicFn("chain-raise", "unpause-campaign", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("prevents non-owner from pausing", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "pause-campaign",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // err-not-authorized
+    });
+  });
+
+  describe("Donation Limits", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(1000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("enforces minimum donation limit", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(500000)], // Less than 1 STX minimum
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(109)); // err-donation-too-small
+    });
+
+    it("enforces maximum donation limit", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(200000000000)], // More than 100,000 STX
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(110)); // err-donation-too-large
+    });
