@@ -83,3 +83,58 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(106)); // err-already-initialized
     });
+
+     it("rejects zero goal", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(0), // zero goal
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(100)); // err-not-authorized
+    });
+  });
+
+  describe("Emergency Pause Mechanism", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(1000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("allows owner to pause campaign", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "pause-campaign",
+        [],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("prevents donations when paused", () => {
+      simnet.callPublicFn("chain-raise", "pause-campaign", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(108)); // err-paused
+    });
