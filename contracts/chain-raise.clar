@@ -156,3 +156,54 @@
     (ok true)
   )
 )
+
+;; Cancel the campaign
+;; Only the owner can call this, at any time during or after the campaign
+;; Allows donors to get a refund
+;; Can only be called once
+(define-public (cancel-campaign)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-withdrawn)) err-already-withdrawn)
+    (var-set is-campaign-cancelled true)
+    (print {
+      event: "campaign-cancelled",
+      total-stx: (var-get total-stx),
+      total-sbtc: (var-get total-sbtc),
+      donors: (var-get donation-count)
+    })
+    (ok true)
+  )
+)
+
+;; Donate STX. Pass amount in microstacks.
+(define-public (donate-stx (amount uint))
+  (begin
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-cancelled)) err-campaign-cancelled)
+    (asserts! (not (var-get is-paused)) err-paused)
+    (asserts! (>= amount (var-get min-donation-stx)) err-donation-too-small)
+    (asserts! (<= amount (var-get max-donation-stx)) err-donation-too-large)
+    (asserts!
+      (< burn-block-height
+        (+ (var-get campaign-start) (var-get campaign-duration))
+      )
+      err-campaign-ended
+    )
+    (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+    (map-set stx-donations tx-sender
+      (+ (default-to u0 (map-get? stx-donations tx-sender)) amount)
+    )
+    (var-set total-stx (+ (var-get total-stx) amount))
+    (var-set donation-count (+ (var-get donation-count) u1))
+    (print {
+      event: "donation-stx",
+      donor: tx-sender,
+      amount: amount,
+      total: (var-get total-stx),
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
