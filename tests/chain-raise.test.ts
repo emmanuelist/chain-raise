@@ -313,3 +313,74 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(donation.result).toBeOk(Cl.uint(8000000));
     });
+
+    it("prevents donations after campaign ends", () => {
+      simnet.mineEmptyBlocks(4321);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(101)); // err-campaign-ended
+    });
+
+    it("prevents donations to cancelled campaign", () => {
+      simnet.callPublicFn("chain-raise", "cancel-campaign", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(5000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(105)); // err-campaign-cancelled
+    });
+  });
+
+  describe("Milestones", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(100000000), // 100 STX goal
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("allows owner to add milestones", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "add-milestone",
+        [
+          Cl.uint(25000000), // 25 STX
+          Cl.stringUtf8("First milestone")
+        ],
+        deployer
+      );
+      expect(result).toBeOk(Cl.uint(0)); // Returns milestone ID
+
+      // Verify milestone
+      const milestone = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-milestone",
+        [Cl.uint(0)],
+        deployer
+      );
+      expect(milestone.result).toBeOk(
+        Cl.some(
+          Cl.tuple({
+            amount: Cl.uint(25000000),
+            description: Cl.stringUtf8("First milestone"),
+            withdrawn: Cl.bool(false)
+          })
+        )
+      );
+    });
