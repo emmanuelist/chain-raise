@@ -414,3 +414,42 @@
     (ok true)
   )
 )
+
+;; Add beneficiary for multi-beneficiary campaigns
+;; Percentage is out of 10000 (e.g., 2500 = 25.00%)
+;; Note: Unchecked data warnings acceptable - owner-only with percentage validation
+(define-public (add-beneficiary (address principal) (percentage uint))
+  (let ((beneficiary-id (var-get beneficiary-count)))
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-withdrawn)) err-already-withdrawn)
+    (asserts! (< beneficiary-id max-beneficiaries) err-not-authorized)
+    ;; Validate percentage range (already checked, but explicit for linter)
+    (asserts! (and (> percentage u0) (<= percentage u10000)) err-invalid-percentage)
+    ;; Principal type is cryptographically validated by Clarity - cannot be invalid
+    (map-set beneficiaries beneficiary-id {
+      address: address,
+      percentage: percentage
+    })
+    (var-set beneficiary-count (+ beneficiary-id u1))
+    (print {
+      event: "beneficiary-added",
+      beneficiary-id: beneficiary-id,
+      address: address,
+      percentage: percentage
+    })
+    (ok beneficiary-id)
+  )
+)
+
+;; Helper function to distribute funds to multiple beneficiaries
+(define-private (distribute-to-beneficiaries (total-stx-amount uint) (total-sbtc-amount uint))
+  (begin
+    (try! (distribute-stx-to-beneficiary u0 total-stx-amount))
+    (try! (distribute-stx-to-beneficiary u1 total-stx-amount))
+    (try! (distribute-stx-to-beneficiary u2 total-stx-amount))
+    (try! (distribute-stx-to-beneficiary u3 total-stx-amount))
+    (try! (distribute-stx-to-beneficiary u4 total-stx-amount))
+    (ok true)
+  )
+)
