@@ -1,3 +1,4 @@
+
 import { describe, expect, it, beforeEach } from "vitest";
 import { Cl } from "@stacks/transactions";
 
@@ -84,7 +85,7 @@ describe("Chain Raise Smart Contract Tests", () => {
       expect(result).toBeErr(Cl.uint(106)); // err-already-initialized
     });
 
-     it("rejects zero goal", () => {
+    it("rejects zero goal", () => {
       const { result } = simnet.callPublicFn(
         "chain-raise",
         "initialize-campaign",
@@ -693,3 +694,24 @@ describe("Chain Raise Smart Contract Tests", () => {
       );
       expect(result).toBeErr(Cl.uint(104)); // err-campaign-not-ended
     });
+
+    it("prevents double withdrawal", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+      simnet.mineEmptyBlocks(101);
+      simnet.callPublicFn("chain-raise", "withdraw", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw",
+        [],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(107)); // err-already-withdrawn
+    });
+  });
+});
