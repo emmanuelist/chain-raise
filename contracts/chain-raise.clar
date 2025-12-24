@@ -499,3 +499,56 @@
     (ok true)
   )
 )
+
+;; Getter functions
+(define-read-only (get-stx-donation (donor principal))
+  (ok (default-to u0 (map-get? stx-donations donor)))
+)
+
+(define-read-only (get-sbtc-donation (donor principal))
+  (ok (default-to u0 (map-get? sbtc-donations donor)))
+)
+
+(define-read-only (get-campaign-info)
+  (ok {
+    start: (var-get campaign-start),
+    end: (+ (var-get campaign-start) (var-get campaign-duration)),
+    goal: (var-get campaign-goal),
+    totalStx: (var-get total-stx),
+    totalSbtc: (var-get total-sbtc),
+    donationCount: (var-get donation-count),
+    isExpired: (>= burn-block-height
+      (+ (var-get campaign-start) (var-get campaign-duration))
+    ),
+    isWithdrawn: (var-get is-campaign-withdrawn),
+    isCancelled: (var-get is-campaign-cancelled),
+    isPaused: (var-get is-paused),
+    title: (var-get campaign-title),
+    description: (var-get campaign-description),
+    category: (var-get campaign-category),
+    beneficiary: (var-get beneficiary),
+    beneficiaryCount: (var-get beneficiary-count),
+    milestoneCount: (var-get milestone-count)
+  })
+)
+
+(define-read-only (get-contract-balance)
+  (stx-get-balance (as-contract tx-sender))
+)
+
+(define-read-only (get-milestone (milestone-id uint))
+  (ok (map-get? milestones milestone-id))
+)
+
+(define-read-only (get-beneficiary (beneficiary-id uint))
+  (ok (map-get? beneficiaries beneficiary-id))
+)
+
+(define-read-only (get-donation-limits)
+  (ok {
+    min-stx: (var-get min-donation-stx),
+    max-stx: (var-get max-donation-stx),
+    min-sbtc: (var-get min-donation-sbtc),
+    max-sbtc: (var-get max-donation-sbtc)
+  })
+)
