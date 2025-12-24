@@ -453,3 +453,49 @@
     (ok true)
   )
 )
+
+(define-private (distribute-stx-to-beneficiary (beneficiary-id uint) (total-amount uint))
+  (match (map-get? beneficiaries beneficiary-id)
+    beneficiary-info
+      (let (
+          (beneficiary-addr (get address beneficiary-info))
+          (percentage (get percentage beneficiary-info))
+          (amount (/ (* total-amount percentage) u10000))
+        )
+        (if (> amount u0)
+          (as-contract (try! (stx-transfer? amount (as-contract tx-sender) beneficiary-addr)))
+          true
+        )
+        (ok true)
+      )
+    (ok true) ;; No beneficiary at this ID, skip
+  )
+)
+
+;; Set donation limits
+;; Note: Unchecked data warnings acceptable - owner-only function with logical validation
+(define-public (set-donation-limits
+    (min-stx uint)
+    (max-stx uint)
+    (min-sbtc uint)
+    (max-sbtc uint)
+  )
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    ;; Validate min < max for both STX and sBTC
+    (asserts! (< min-stx max-stx) err-invalid-percentage)
+    (asserts! (< min-sbtc max-sbtc) err-invalid-percentage)
+    (var-set min-donation-stx min-stx)
+    (var-set max-donation-stx max-stx)
+    (var-set min-donation-sbtc min-sbtc)
+    (var-set max-donation-sbtc max-sbtc)
+    (print {
+      event: "donation-limits-updated",
+      min-stx: min-stx,
+      max-stx: max-stx,
+      min-sbtc: min-sbtc,
+      max-sbtc: max-sbtc
+    })
+    (ok true)
+  )
+)
