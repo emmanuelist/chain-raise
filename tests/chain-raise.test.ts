@@ -466,3 +466,49 @@ describe("Chain Raise Smart Contract Tests", () => {
       expect(result).toBeErr(Cl.uint(112)); // err-milestone-already-withdrawn
     });
   });
+
+  describe("Beneficiary Management", () => {
+    beforeEach(() => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(50000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        deployer
+      );
+    });
+
+    it("allows owner to update beneficiary", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "update-beneficiary",
+        [Cl.principal(wallet2)],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("prevents beneficiary update after withdrawal", () => {
+      // Donate and wait for campaign to end
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(50000000)],
+        wallet1
+      );
+      simnet.mineEmptyBlocks(4321);
+      simnet.callPublicFn("chain-raise", "withdraw", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "update-beneficiary",
+        [Cl.principal(wallet2)],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(107)); // err-already-withdrawn
+    });
