@@ -94,3 +94,65 @@
     percentage: uint ;; out of 10000 (100.00%)
   }
 )
+
+;; Initialize the campaign (goal in US dollars)
+;; Pass duration as 0 to use the default duration (~30 days)
+;; Can only be called once
+;; Note: Unchecked data warnings are acceptable here as only contract-owner can call this
+(define-public (initialize-campaign
+    (goal uint)
+    (duration uint)
+    (title (string-ascii 100))
+    (description (string-utf8 500))
+    (category (string-ascii 50))
+  )
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (not (var-get is-campaign-initialized)) err-already-initialized)
+    ;; Validate goal is positive
+    (asserts! (> goal u0) err-not-authorized)
+    (var-set is-campaign-initialized true)
+    (var-set campaign-start burn-block-height)
+    (var-set campaign-goal goal)
+    ;; String types are already bounded by type declarations (string-ascii 100, string-utf8 500, string-ascii 50)
+    ;; Clarity's type system enforces max length, making additional validation redundant
+    (var-set campaign-title title)
+    (var-set campaign-description description)
+    (var-set campaign-category category)
+    (var-set campaign-duration
+      (if (is-eq duration u0)
+        default-duration
+        duration
+      ))
+    (print {
+      event: "campaign-initialized",
+      goal: goal,
+      duration: (var-get campaign-duration),
+      title: title,
+      category: category,
+      start-block: burn-block-height
+    })
+    (ok true)
+  )
+)
+
+;; Emergency pause mechanism
+(define-public (pause-campaign)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (var-set is-paused true)
+    (print { event: "campaign-paused", block: burn-block-height })
+    (ok true)
+  )
+)
+
+(define-public (unpause-campaign)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (var-set is-paused false)
+    (print { event: "campaign-unpaused", block: burn-block-height })
+    (ok true)
+  )
+)
