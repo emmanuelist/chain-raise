@@ -295,3 +295,72 @@
     (ok true)
   )
 )
+
+;; Refund to donor
+;; Available if: campaign cancelled OR (campaign ended AND goal not met)
+(define-public (refund)
+  (let (
+      (stx-amount (default-to u0 (map-get? stx-donations tx-sender)))
+      (sbtc-amount (default-to u0 (map-get? sbtc-donations tx-sender)))
+      (contributor tx-sender)
+      (campaign-ended (>= burn-block-height
+        (+ (var-get campaign-start) (var-get campaign-duration))))
+      (goal-met (>= (var-get total-stx) (var-get campaign-goal)))
+    )
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    ;; Refund allowed if cancelled OR (ended and goal not met)
+    (asserts! (or (var-get is-campaign-cancelled)
+                   (and campaign-ended (not goal-met)))
+              err-not-cancelled)
+    (asserts! (not (var-get is-campaign-withdrawn)) err-already-withdrawn)
+    (if (> stx-amount u0)
+      (begin
+        (as-contract (try! (stx-transfer? stx-amount tx-sender contributor)))
+        (map-delete stx-donations tx-sender)
+      )
+      true
+    )
+    (if (> sbtc-amount u0)
+      (begin
+        (as-contract (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+          transfer sbtc-amount tx-sender contributor none
+        )))
+        (map-delete sbtc-donations tx-sender)
+      )
+      true
+    )
+    (print {
+      event: "refund-processed",
+      donor: contributor,
+      stx-amount: stx-amount,
+      sbtc-amount: sbtc-amount,
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
+
+;; Add milestone
+;; Note: Unchecked data warnings are acceptable - owner-only function with type-safe inputs
+(define-public (add-milestone (amount uint) (description (string-utf8 200)))
+  (let ((milestone-id (var-get milestone-count)))
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    ;; Validate amount is positive
+    (asserts! (> amount u0) err-not-authorized)
+    ;; Description type (string-utf8 200) is bounded by Clarity type system
+    (map-set milestones milestone-id {
+      amount: amount,
+      description: description,
+      withdrawn: false
+    })
+    (var-set milestone-count (+ milestone-id u1))
+    (print {
+      event: "milestone-added",
+      milestone-id: milestone-id,
+      amount: amount,
+      description: description
+    })
+    (ok milestone-id)
+  )
+)
