@@ -364,3 +364,53 @@
     (ok milestone-id)
   )
 )
+
+;; Withdraw funds for a specific milestone
+(define-public (withdraw-milestone (milestone-id uint))
+  (let (
+      (milestone (unwrap! (map-get? milestones milestone-id) err-milestone-not-found))
+      (milestone-amount (get amount milestone))
+      (total-raised (var-get total-stx))
+      (beneficiary-addr (var-get beneficiary))
+    )
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-cancelled)) err-campaign-cancelled)
+    (asserts! (is-eq tx-sender beneficiary-addr) err-not-authorized)
+    (asserts! (not (get withdrawn milestone)) err-milestone-already-withdrawn)
+    (asserts! (>= total-raised milestone-amount) err-goal-not-met)
+    
+    ;; Mark milestone as withdrawn
+    (map-set milestones milestone-id (merge milestone { withdrawn: true }))
+    
+    ;; Transfer the milestone amount
+    (as-contract (try! (stx-transfer? milestone-amount (as-contract tx-sender) beneficiary-addr)))
+    
+    (print {
+      event: "milestone-withdrawn",
+      milestone-id: milestone-id,
+      amount: milestone-amount,
+      beneficiary: beneficiary-addr,
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
+
+;; Update beneficiary (only before withdrawal)
+;; Note: Unchecked data warning is acceptable - principal type is inherently validated by Clarity
+(define-public (update-beneficiary (new-beneficiary principal))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-withdrawn)) err-already-withdrawn)
+    ;; Principal type is already validated by Clarity type system
+    (var-set beneficiary new-beneficiary)
+    (print {
+      event: "beneficiary-updated",
+      old-beneficiary: (var-get beneficiary),
+      new-beneficiary: new-beneficiary,
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
