@@ -240,3 +240,58 @@
     (ok true)
   )
 )
+
+;; Withdraw funds (only beneficiary/beneficiaries, only if campaign ended and goal met)
+(define-public (withdraw)
+  (let (
+      (total-stx-amount (var-get total-stx))
+      (total-sbtc-amount (var-get total-sbtc))
+      (num-beneficiaries (var-get beneficiary-count))
+    )
+    (asserts! (var-get is-campaign-initialized) err-not-initialized)
+    (asserts! (not (var-get is-campaign-cancelled)) err-campaign-cancelled)
+    (asserts! (not (var-get is-campaign-withdrawn)) err-already-withdrawn)
+    (asserts!
+      (>= burn-block-height
+        (+ (var-get campaign-start) (var-get campaign-duration))
+      )
+      err-campaign-not-ended
+    )
+    ;; If multiple beneficiaries, only owner can trigger withdraw
+    ;; If single beneficiary, only that beneficiary can withdraw
+    (if (> num-beneficiaries u0)
+      (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
+      (asserts! (is-eq tx-sender (var-get beneficiary)) err-not-authorized)
+    )
+    (var-set is-campaign-withdrawn true)
+    (try! (if (> num-beneficiaries u0)
+      ;; Distribute to multiple beneficiaries
+      (distribute-to-beneficiaries total-stx-amount total-sbtc-amount)
+      ;; Single beneficiary withdrawal
+      (as-contract (begin
+        (if (> total-stx-amount u0)
+          (try! (stx-transfer? total-stx-amount (as-contract tx-sender)
+            (var-get beneficiary)
+          ))
+          true
+        )
+        (if (> total-sbtc-amount u0)
+          (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+            transfer total-sbtc-amount (as-contract tx-sender)
+            (var-get beneficiary) none
+          ))
+          true
+        )
+        (ok true)
+      ))
+    ))
+    (print {
+      event: "funds-withdrawn",
+      stx-amount: total-stx-amount,
+      sbtc-amount: total-sbtc-amount,
+      beneficiary: (var-get beneficiary),
+      block: burn-block-height
+    })
+    (ok true)
+  )
+)
