@@ -1,0 +1,56 @@
+import { describe, expect, it, beforeEach } from "vitest";
+import { Cl } from "@stacks/transactions";
+
+const accounts = simnet.getAccounts();
+const deployer = accounts.get("deployer")!;
+const wallet1 = accounts.get("wallet_1")!;
+const wallet2 = accounts.get("wallet_2")!;
+const wallet3 = accounts.get("wallet_3")!;
+
+describe("Chain Raise Smart Contract Tests", () => {
+  
+  beforeEach(() => {
+    simnet.setEpoch("3.0");
+  });
+
+  describe("Campaign Initialization", () => {
+    it("allows owner to initialize campaign with metadata", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(1000000), // goal
+          Cl.uint(4320),    // duration
+          Cl.stringAscii("Save the Whales"), // title
+          Cl.stringUtf8("Help us protect endangered whales"), // description
+          Cl.stringAscii("Environment") // category
+        ],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+
+      // Verify campaign info is readable
+      const info = simnet.callReadOnlyFn(
+        "chain-raise",
+        "get-campaign-info",
+        [],
+        deployer
+      );
+      expect(info.result).toBeDefined();
+    });
+
+    it("prevents non-owner from initializing campaign", () => {
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "initialize-campaign",
+        [
+          Cl.uint(1000000),
+          Cl.uint(4320),
+          Cl.stringAscii("Test"),
+          Cl.stringUtf8("Test"),
+          Cl.stringAscii("Test")
+        ],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // err-not-authorized
+    });
