@@ -384,3 +384,85 @@ describe("Chain Raise Smart Contract Tests", () => {
         )
       );
     });
+
+    it("allows withdrawal when milestone reached", () => {
+      // Add milestone
+      simnet.callPublicFn(
+        "chain-raise",
+        "add-milestone",
+        [Cl.uint(25000000), Cl.stringUtf8("First milestone")],
+        deployer
+      );
+
+      // Donate to reach milestone
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(30000000)], // 30 STX
+        wallet1
+      );
+
+      // Withdraw milestone
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw-milestone",
+        [Cl.uint(0)],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("prevents withdrawal when milestone not reached", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "add-milestone",
+        [Cl.uint(25000000), Cl.stringUtf8("First milestone")],
+        deployer
+      );
+
+      // Donate less than milestone
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(10000000)],
+        wallet1
+      );
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw-milestone",
+        [Cl.uint(0)],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(114)); // err-goal-not-met
+    });
+
+    it("prevents double withdrawal of same milestone", () => {
+      simnet.callPublicFn(
+        "chain-raise",
+        "add-milestone",
+        [Cl.uint(25000000), Cl.stringUtf8("First milestone")],
+        deployer
+      );
+      simnet.callPublicFn(
+        "chain-raise",
+        "donate-stx",
+        [Cl.uint(30000000)],
+        wallet1
+      );
+      simnet.callPublicFn(
+        "chain-raise",
+        "withdraw-milestone",
+        [Cl.uint(0)],
+        deployer
+      );
+
+      const { result } = simnet.callPublicFn(
+        "chain-raise",
+        "withdraw-milestone",
+        [Cl.uint(0)],
+        deployer
+      );
+      expect(result).toBeErr(Cl.uint(112)); // err-milestone-already-withdrawn
+    });
+  });
