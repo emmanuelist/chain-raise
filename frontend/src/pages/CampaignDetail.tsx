@@ -135,8 +135,8 @@ export default function CampaignDetail() {
               {/* Hero Image */}
               <div className="relative rounded-lg sm:rounded-xl overflow-hidden aspect-video">
                 <img
-                  src={campaign.imageUrl}
-                  alt={campaign.title}
+                  src={campaign?.imageUrl || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&auto=format&fit=crop'}
+                  alt={campaign?.title || 'Campaign'}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
