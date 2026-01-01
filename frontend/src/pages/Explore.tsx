@@ -5,7 +5,8 @@ import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { mockCampaigns, campaignCategories } from "@/lib/mockData";
+import { campaignCategories } from "@/lib/mockData";
+import { useCampaign } from "@/hooks/useCampaign";
 import { Search, SlidersHorizontal, Grid, List, TrendingUp, Clock, Target, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,20 +26,17 @@ export default function Explore() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("trending");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch campaign from blockchain
+  const { campaign, loading: isLoading, error } = useCampaign();
 
-  // Simulate initial data loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  // Create campaigns array (single campaign for now)
+  const campaigns = campaign ? [campaign] : [];
 
-  const filteredCampaigns = mockCampaigns.filter((campaign) => {
-    const matchesCategory = selectedCategory === "All" || campaign.category === selectedCategory;
-    const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          campaign.description.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredCampaigns = campaigns.filter((c) => {
+    const matchesCategory = selectedCategory === "All" || c.category === selectedCategory;
+    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -49,6 +47,15 @@ export default function Explore() {
   });
 
   const { setTargetRef } = useInfiniteScroll(loadMore, hasNextPage, isLoadingMore);
+
+  // Show error toast if blockchain fetch fails
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to load campaign from blockchain", {
+        description: error,
+      });
+    }
+  }, [error]);
 
   return (
     <div className="min-h-screen bg-background">
