@@ -57,6 +57,7 @@ export function useCampaign() {
         raised: data.totalStx,
         donorCount: data.donationCount,
         daysLeft,
+        imageUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&auto=format&fit=crop', // Default image
         creator: data.beneficiary,
         isActive: !data.isCancelled && !data.isWithdrawn && daysLeft > 0,
         milestoneCount: data.milestoneCount,
