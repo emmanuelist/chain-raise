@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { connect, disconnect } from '@stacks/connect';
-import { StacksMainnet, StacksTestnet } from '@stacks/network';
+import { STACKS_MAINNET, STACKS_TESTNET } from '@stacks/network';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -47,7 +47,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           name: 'Chain Raise',
           icon: window.location.origin + '/logo.png',
         },
-        network: network === 'mainnet' ? new StacksMainnet() : new StacksTestnet(),
+        network: network === 'mainnet' ? STACKS_MAINNET : STACKS_TESTNET,
         onFinish: (data) => {
           const userAddress = data.addresses[network];
           setAddress(userAddress);
