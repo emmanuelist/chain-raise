@@ -20,11 +20,6 @@ export const TiltCard = ({
   const ref = useRef<HTMLDivElement>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   
-  useEffect(() => {
-    // Detect touch device
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-  
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   
@@ -34,6 +29,17 @@ export const TiltCard = ({
   
   const glareX = useSpring(useTransform(x, [-0.5, 0.5], [0, 100]), springConfig);
   const glareY = useSpring(useTransform(y, [-0.5, 0.5], [0, 100]), springConfig);
+  
+  const glareBackground = useTransform(
+    [glareX, glareY],
+    ([x, y]) => 
+      `radial-gradient(circle at ${x}% ${y}%, hsl(0 0% 100% / 0.15) 0%, transparent 50%)`
+  );
+  
+  useEffect(() => {
+    // Detect touch device
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isTouchDevice || !ref.current) return;
@@ -79,11 +85,7 @@ export const TiltCard = ({
         <motion.div
           className="pointer-events-none absolute inset-0 rounded-inherit overflow-hidden"
           style={{
-            background: useTransform(
-              [glareX, glareY],
-              ([x, y]) => 
-                `radial-gradient(circle at ${x}% ${y}%, hsl(0 0% 100% / 0.15) 0%, transparent 50%)`
-            ),
+            background: glareBackground,
           }}
         />
       )}
