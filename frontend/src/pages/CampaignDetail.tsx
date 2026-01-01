@@ -297,8 +297,6 @@ export default function CampaignDetail() {
                       Connect your wallet to see your contribution
                     </div>
                   </div>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             </div>
