@@ -15,10 +15,12 @@ export interface Campaign {
   raised: number;
   donorCount: number;
   daysLeft: number;
-  imageUrl: string;
+  imageUrl?: string;
   creator: string;
   isActive: boolean;
   milestoneCount: number;
+  isPaused?: boolean;
+  isCancelled?: boolean;
 }
 
 interface CampaignCardProps {
@@ -59,7 +61,7 @@ export function CampaignCard({ campaign, className }: CampaignCardProps) {
       {/* Image */}
       <div className="relative h-40 sm:h-48 lg:h-52 overflow-hidden">
         <img
-          src={campaign.imageUrl}
+          src={campaign.imageUrl || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&auto=format&fit=crop'}
           alt={campaign.title}
           className="w-full h-full object-cover transition-transform duration-700 ease-out-quint group-hover:scale-110"
         />
