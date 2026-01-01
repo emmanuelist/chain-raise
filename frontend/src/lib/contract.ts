@@ -11,7 +11,7 @@ import { STACKS_TESTNET, STACKS_MAINNET } from '@stacks/network';
 import { openContractCall } from '@stacks/connect';
 
 // Contract deployment details
-export const CONTRACT_ADDRESS = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+export const CONTRACT_ADDRESS = 'STHB047A30W99178TR7KE0784C2GV2206H98PPY';
 export const CONTRACT_NAME = 'chain-raise';
 
 // Network configuration
@@ -66,7 +66,7 @@ export async function getCampaignInfo(
       beneficiaryCount,
       milestoneCount,
     ] = await Promise.all([
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'is-campaign-initialized',
@@ -74,7 +74,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'is-campaign-cancelled',
@@ -82,7 +82,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'is-paused',
@@ -90,7 +90,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-beneficiary',
@@ -98,7 +98,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-start',
@@ -106,7 +106,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-goal',
@@ -114,7 +114,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-duration',
@@ -122,7 +122,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-total-stx',
@@ -130,7 +130,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-total-sbtc',
@@ -138,7 +138,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-donation-count',
@@ -146,7 +146,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'is-campaign-withdrawn',
@@ -154,7 +154,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-title',
@@ -162,7 +162,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-description',
@@ -170,7 +170,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-campaign-category',
@@ -178,7 +178,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-min-donation-stx',
@@ -186,7 +186,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-max-donation-stx',
@@ -194,7 +194,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-beneficiary-count',
@@ -202,7 +202,7 @@ export async function getCampaignInfo(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-milestone-count',
@@ -244,7 +244,7 @@ export async function getDonorContribution(
 ): Promise<{ stx: number; sbtc: number } | null> {
   try {
     const [stxDonation, sbtcDonation] = await Promise.all([
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-stx-donation',
@@ -252,7 +252,7 @@ export async function getDonorContribution(
         network: getNetwork(network),
         senderAddress: CONTRACT_ADDRESS,
       }),
-      callReadOnlyFunction({
+      fetchCallReadOnlyFunction({
         contractAddress: CONTRACT_ADDRESS,
         contractName: CONTRACT_NAME,
         functionName: 'get-sbtc-donation',
@@ -281,7 +281,7 @@ export async function getMilestone(
   withdrawn: boolean;
 } | null> {
   try {
-    const result = await callReadOnlyFunction({
+    const result = await fetchCallReadOnlyFunction({
       contractAddress: CONTRACT_ADDRESS,
       contractName: CONTRACT_NAME,
       functionName: 'get-milestone',
