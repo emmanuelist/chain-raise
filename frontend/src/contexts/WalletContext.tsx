@@ -42,25 +42,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const connectWallet = async () => {
     setIsLoading(true);
     try {
-      const response = await connect({
-        appDetails: {
-          name: 'Chain Raise',
-          icon: window.location.origin + '/logo.png',
-        },
-        network: network === 'mainnet' ? STACKS_MAINNET : STACKS_TESTNET,
-        onFinish: (data) => {
-          const userAddress = data.addresses[network];
-          setAddress(userAddress);
-          setIsConnected(true);
-          
-          // Persist connection state
-          localStorage.setItem('stacks-address', userAddress);
-          localStorage.setItem('stacks-network', network);
-        },
-        onCancel: () => {
-          console.log('User cancelled wallet connection');
-        },
-      });
+      const response = await connect();
+      
+      // For testnet, addresses[2] contains the testnet address
+      // For mainnet, addresses[0] contains the mainnet address
+      const addressIndex = network === 'mainnet' ? 0 : 2;
+      const userAddress = response.addresses[addressIndex].address;
+      
+      setAddress(userAddress);
+      setIsConnected(true);
+      
+      // Persist connection state
+      localStorage.setItem('stacks-address', userAddress);
+      localStorage.setItem('stacks-network', network);
     } catch (error) {
       console.error('Error connecting wallet:', error);
     } finally {
