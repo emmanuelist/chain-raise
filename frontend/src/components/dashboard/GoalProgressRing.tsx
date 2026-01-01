@@ -15,8 +15,13 @@ export function GoalProgressRing({
   title = "Funding Goal" 
 }: GoalProgressRingProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
-  const percentage = Math.min((current / goal) * 100, 100);
-  const remaining = Math.max(goal - current, 0);
+  
+  // Ensure valid numbers to prevent NaN
+  const validCurrent = Number.isFinite(current) ? current : 0;
+  const validGoal = Number.isFinite(goal) && goal > 0 ? goal : 1;
+  
+  const percentage = Math.min((validCurrent / validGoal) * 100, 100);
+  const remaining = Math.max(validGoal - validCurrent, 0);
   
   // SVG circle calculations
   const size = 160;
