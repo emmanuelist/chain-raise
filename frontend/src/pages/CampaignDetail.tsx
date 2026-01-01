@@ -388,9 +388,10 @@ export default function CampaignDetail() {
                         variant="gradient"
                         className="w-full h-10 sm:h-12 text-sm sm:text-base"
                         onClick={handleDonate}
+                        disabled={isSubmitting || !connected}
                       >
                         <Wallet className="h-4 w-4" />
-                        Donate Now
+                        {isSubmitting ? "Processing..." : connected ? "Donate Now" : "Connect Wallet"}
                       </Button>
 
                       <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
