@@ -36,47 +36,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const userStats = {
-  totalRaised: 77500000000,
-  totalDonated: 12500000000,
-  activeCampaigns: 2,
-  totalDonors: 512,
-  fundingGoal: 100000000000,
-};
-
-// Sparkline data for each stat (last 7 days trend)
-const sparklineData = {
-  raised: [45000, 52000, 48000, 61000, 58000, 72000, 77500],
-  donated: [8000, 9500, 10200, 11000, 11800, 12000, 12500],
-  campaigns: [1, 1, 1, 2, 2, 2, 2],
-  donors: [380, 410, 435, 460, 485, 500, 512],
-};
-
-const userCampaigns = mockCampaigns.slice(0, 2);
-
-const userDonations = [
-  { campaignId: "3", campaignTitle: "Rainforest Conservation DAO", amount: 5000000000, date: "2024-01-15", status: "active" },
-  { campaignId: "4", campaignTitle: "Decentralized Healthcare Records", amount: 2500000000, date: "2024-01-10", status: "active" },
-  { campaignId: "5", campaignTitle: "NFT Art Gallery for Emerging Artists", amount: 5000000000, date: "2023-12-20", status: "completed" },
-];
-
-const recentActivity = [
-  { type: "donation_received", amount: 5000000000, from: "ST1P...ZGZM", campaign: "DeFi Education Platform", time: "2 hours ago" },
-  { type: "donation_made", amount: 2500000000, to: "Rainforest DAO", time: "5 hours ago" },
-  { type: "milestone_reached", campaign: "DeFi Education Platform", milestone: "Development Phase 1", time: "1 day ago" },
-  { type: "donation_received", amount: 10000000000, from: "ST2C...K9AG", campaign: "DeFi Education Platform", time: "2 days ago" },
-];
-
 export default function Dashboard() {
-  const [isLoading, setIsLoading] = useState(true);
+  const { address, connected } = useWallet();
+  const { campaign, loading: campaignLoading } = useCampaign();
+  const { contribution, loading: contributionLoading } = useDonorContribution(address || "");
+  
+  const isLoading = campaignLoading || contributionLoading;
 
-  // Simulate initial data loading
+  // Show wallet connection prompt if not connected
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!connected) {
+      toast.info("Connect your wallet to view your dashboard");
+    }
+  }, [connected]);
+
+  // User stats based on blockchain data
+  const userStats = {
+    totalRaised: campaign?.raised || 0,
+    totalDonated: (contribution?.stx || 0) + (contribution?.sbtc || 0),
+    activeCampaigns: campaign?.isActive ? 1 : 0,
+    totalDonors: campaign?.donorCount || 0,
+    fundingGoal: campaign?.goal || 0,
+  };
+
+  // Sparkline data (placeholder - would need historical data)
+  const sparklineData = {
+    raised: [0, 0, 0, 0, 0, 0, userStats.totalRaised / 1000000],
+    donated: [0, 0, 0, 0, 0, 0, userStats.totalDonated / 1000000],
+    campaigns: [0, 0, 0, 0, 0, 0, userStats.activeCampaigns],
+    donors: [0, 0, 0, 0, 0, 0, userStats.totalDonors],
+  };
+
+  const userCampaigns = campaign ? [campaign] : [];
 
   return (
     <div className="min-h-screen bg-background">
