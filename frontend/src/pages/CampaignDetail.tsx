@@ -7,7 +7,9 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockCampaigns } from "@/lib/mockData";
+import { useCampaign, useMilestones, useDonate } from "@/hooks/useCampaign";
+import { useWallet } from "@/hooks/useWallet";
+import { formatStx, calculateProgress } from "@/lib/contract";
 import { SkeletonTransition } from "@/components/ui/skeleton-transition";
 import { CampaignDetailSkeleton } from "@/components/skeletons";
 import { 
@@ -27,46 +29,79 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const mockMilestones = [
-  { id: 1, title: "Research & Planning", amount: 10000000000, completed: true, description: "Complete market research and project roadmap" },
-  { id: 2, title: "Development Phase 1", amount: 20000000000, completed: true, description: "Build core platform features" },
-  { id: 3, title: "Beta Launch", amount: 30000000000, completed: false, description: "Launch beta version to early adopters" },
-  { id: 4, title: "Full Launch", amount: 40000000000, completed: false, description: "Public launch with marketing campaign" },
-];
-
-const mockDonations = [
-  { id: 1, donor: "ST1P...ZGZM", amount: 5000000000, timestamp: "2 hours ago" },
-  { id: 2, donor: "ST2C...K9AG", amount: 10000000000, timestamp: "5 hours ago" },
-  { id: 3, donor: "ST3A...GCS0", amount: 2500000000, timestamp: "1 day ago" },
-  { id: 4, donor: "ST2R...2VB", amount: 7500000000, timestamp: "2 days ago" },
-];
-
 export default function CampaignDetail() {
   const { id } = useParams();
   const [donationAmount, setDonationAmount] = useState("");
   const [isLiked, setIsLiked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch campaign data from blockchain
+  const { campaign, loading: isLoading, error } = useCampaign();
+  const { milestones, loading: milestonesLoading } = useMilestones(campaign?.milestoneCount || 0);
+  const { donate, isSubmitting, error: donateError } = useDonate();
+  const { address, connected } = useWallet();
 
-  // Simulate initial data loading
+  // Show error if blockchain fetch fails
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [id]);
+    if (error) {
+      toast.error("Failed to load campaign", {
+        description: error,
+      });
+    }
+  }, [error]);
 
-  const campaign = mockCampaigns.find(c => c.id === id) || mockCampaigns[0];
-  const progress = Math.min((campaign.raised / campaign.goal) * 100, 100);
-  const formattedGoal = (campaign.goal / 1000000).toLocaleString();
-  const formattedRaised = (campaign.raised / 1000000).toLocaleString();
+  // Show donation error
+  useEffect(() => {
+    if (donateError) {
+      toast.error("Donation failed", {
+        description: donateError,
+      });
+    }
+  }, [donateError]);
 
-  const handleDonate = () => {
+  if (!campaign && !isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pt-24 pb-16">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-2xl font-bold mb-4">Campaign Not Found</h1>
+            <Link to="/explore">
+              <Button>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Explore
+              </Button>
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const progress = campaign ? calculateProgress(campaign.raised, campaign.goal) : 0;
+  const formattedGoal = campaign ? formatStx(campaign.goal) : "0";
+  const formattedRaised = campaign ? formatStx(campaign.raised) : "0";
+
+  const handleDonate = async () => {
+    if (!connected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    
     if (!donationAmount || parseFloat(donationAmount) <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
-    toast.success(`Donation of ${donationAmount} STX initiated!`);
-    setDonationAmount("");
+
+    const amountInMicroStx = Math.floor(parseFloat(donationAmount) * 1000000);
+    
+    try {
+      await donate(amountInMicroStx);
+      toast.success(`Donation of ${donationAmount} STX initiated!`);
+      setDonationAmount("");
+    } catch (err) {
+      console.error("Donation error:", err);
+    }
   };
 
   const handleShare = () => {
@@ -186,41 +221,51 @@ export default function CampaignDetail() {
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="space-y-3 sm:space-y-4">
-                    {mockMilestones.map((milestone, index) => (
-                      <div
-                        key={milestone.id}
-                        className={cn(
-                          "relative pl-6 sm:pl-8 pb-3 sm:pb-4",
-                          index < mockMilestones.length - 1 && "border-l-2 border-border ml-2.5 sm:ml-3"
-                        )}
-                      >
-                        {/* Icon */}
-                        <div className="absolute -left-2.5 sm:-left-3 top-0">
-                          {milestone.completed ? (
-                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-success flex items-center justify-center">
-                              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-success-foreground" />
-                            </div>
-                          ) : (
-                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-border bg-card flex items-center justify-center">
-                              <Circle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Content */}
-                        <div className={cn(milestone.completed && "opacity-60")}>
-                          <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                            <h4 className="font-medium text-sm sm:text-base">{milestone.title}</h4>
-                            <span className="text-xs sm:text-sm text-primary">
-                              {(milestone.amount / 1000000).toLocaleString()} STX
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            {milestone.description}
-                          </p>
-                        </div>
+                    {milestonesLoading ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        Loading milestones...
                       </div>
-                    ))}
+                    ) : milestones && milestones.length > 0 ? (
+                      milestones.map((milestone, index) => (
+                        <div
+                          key={milestone.id}
+                          className={cn(
+                            "relative pl-6 sm:pl-8 pb-3 sm:pb-4",
+                            index < milestones.length - 1 && "border-l-2 border-border ml-2.5 sm:ml-3"
+                          )}
+                        >
+                          {/* Icon */}
+                          <div className="absolute -left-2.5 sm:-left-3 top-0">
+                            {milestone.withdrawn ? (
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-success flex items-center justify-center">
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-success-foreground" />
+                              </div>
+                            ) : (
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-border bg-card flex items-center justify-center">
+                                <Circle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className={cn(milestone.withdrawn && "opacity-60")}>
+                            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                              <h4 className="font-medium text-sm sm:text-base">{milestone.title}</h4>
+                              <span className="text-xs sm:text-sm text-primary">
+                                {formatStx(milestone.amount)}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              {milestone.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        No milestones set yet
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -230,29 +275,28 @@ export default function CampaignDetail() {
                 <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                     <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    Recent Donations
+                    Donor Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="space-y-2 sm:space-y-3">
-                    {mockDonations.map((donation) => (
-                      <div
-                        key={donation.id}
-                        className="flex items-center justify-between py-2 sm:py-3 border-b border-border/50 last:border-0"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-xs sm:text-sm">{donation.donor}</div>
-                            <div className="text-[10px] sm:text-xs text-muted-foreground">{donation.timestamp}</div>
-                          </div>
-                        </div>
-                        <div className="text-xs sm:text-sm font-medium text-primary">
-                          +{(donation.amount / 1000000).toLocaleString()} STX
-                        </div>
+                    <div className="flex items-center justify-between py-2 sm:py-3 border-b border-border/50">
+                      <div className="text-sm text-muted-foreground">Total Donors</div>
+                      <div className="font-medium text-primary">{campaign?.donorCount || 0}</div>
+                    </div>
+                    <div className="flex items-center justify-between py-2 sm:py-3">
+                      <div className="text-sm text-muted-foreground">Average Donation</div>
+                      <div className="font-medium text-primary">
+                        {campaign && campaign.donorCount > 0 
+                          ? formatStx(Math.floor(campaign.raised / campaign.donorCount))
+                          : formatStx(0)
+                        }
                       </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-4 text-center">
+                      Connect your wallet to see your contribution
+                    </div>
+                  </div>
                     ))}
                   </div>
                 </CardContent>
