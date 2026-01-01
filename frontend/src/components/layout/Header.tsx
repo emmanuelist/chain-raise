@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Wallet, Menu, X, Rocket, Search, ChevronDown } from "lucide-react";
+import { Menu, X, Rocket, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { ConnectButton } from "@/components/ConnectButton";
 
 const navLinks = [
   { href: "/explore", label: "Explore" },
@@ -13,7 +13,6 @@ const navLinks = [
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
@@ -24,15 +23,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const handleConnect = () => {
-    if (!isConnected) {
-      toast.success("Wallet connected successfully!");
-    } else {
-      toast.info("Wallet disconnected");
-    }
-    setIsConnected(!isConnected);
-  };
 
   return (
     <header 
@@ -94,24 +84,7 @@ export function Header() {
               </Link>
             </Button>
             
-            <Button
-              variant={isConnected ? "glass" : "gradient"}
-              onClick={handleConnect}
-              className={cn(
-                "gap-2 transition-all duration-300",
-                isConnected && "border border-primary/30"
-              )}
-            >
-              <Wallet className="h-4 w-4" />
-              {isConnected ? (
-                <span className="flex items-center gap-1">
-                  ST1P...ZGZM
-                  <ChevronDown className="h-3 w-3" />
-                </span>
-              ) : (
-                "Connect Wallet"
-              )}
-            </Button>
+            <ConnectButton variant="gradient" />
           </div>
 
           {/* Mobile Menu Button */}
@@ -163,17 +136,10 @@ export function Header() {
                 </Link>
               );
             })}
-            <Button
-              variant={isConnected ? "glass" : "gradient"}
-              onClick={() => {
-                handleConnect();
-                setIsMenuOpen(false);
-              }}
-              className="mt-2 gap-2"
-            >
-              <Wallet className="h-4 w-4" />
-              {isConnected ? "ST1P...ZGZM" : "Connect Wallet"}
-            </Button>
+            <ConnectButton 
+              variant="gradient" 
+              size="default"
+            />
           </nav>
         </div>
       </div>
