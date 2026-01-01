@@ -306,36 +306,58 @@ export default function Dashboard() {
                 </TabsContent>
 
                 <TabsContent value="donations" className="space-y-3 sm:space-y-4">
-                  {userDonations.map((donation, index) => (
-                    <Card key={index} className="glass-card">
+                  {connected && contribution && (contribution.stx > 0 || contribution.sbtc > 0) ? (
+                    <Card className="glass-card">
                       <CardContent className="p-4 sm:p-5 lg:p-6">
                         <div className="flex items-center justify-between">
                           <div>
                             <Link
-                              to={`/campaign/${donation.campaignId}`}
+                              to="/explore"
                               className="font-medium hover:text-primary transition-colors"
                             >
-                              {donation.campaignTitle}
+                              Your Contribution
                             </Link>
                             <div className="text-sm text-muted-foreground mt-1">
-                              Donated on {new Date(donation.date).toLocaleDateString()}
+                              Total donated to campaigns
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-heading font-semibold text-primary">
-                              {(donation.amount / 1000000).toLocaleString()} STX
-                            </div>
-                            <Badge
-                              variant={donation.status === "active" ? "default" : "secondary"}
-                              className="mt-1"
-                            >
-                              {donation.status === "active" ? "Campaign Active" : "Completed"}
+                            {contribution.stx > 0 && (
+                              <div className="font-heading font-semibold text-primary">
+                                {(contribution.stx / 1000000).toLocaleString()} STX
+                              </div>
+                            )}
+                            {contribution.sbtc > 0 && (
+                              <div className="font-heading font-semibold text-orange-500 text-sm">
+                                {(contribution.sbtc / 100000000).toFixed(6)} sBTC
+                              </div>
+                            )}
+                            <Badge variant="default" className="mt-1">
+                              Active Donor
                             </Badge>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  ) : (
+                    <Card className="glass-card">
+                      <CardContent className="p-8 text-center">
+                        <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="font-heading text-lg font-semibold mb-2">No Donations Yet</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {connected 
+                            ? "Start supporting campaigns to see your donation history here."
+                            : "Connect your wallet to view your donations."
+                          }
+                        </p>
+                        <Link to="/explore">
+                          <Button>
+                            Explore Campaigns
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -346,82 +368,60 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5 text-primary" />
-                    Recent Activity
+                    Campaign Overview
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-3 sm:space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          "flex gap-2 sm:gap-3 pb-3 sm:pb-4",
-                          index < recentActivity.length - 1 && "border-b border-border/50"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0",
-                          activity.type === "donation_received" && "bg-success/20",
-                          activity.type === "donation_made" && "bg-accent/20",
-                          activity.type === "milestone_reached" && "bg-primary/20"
-                        )}>
-                          {activity.type === "donation_received" && (
-                            <ArrowDownRight className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
-                          )}
-                          {activity.type === "donation_made" && (
-                            <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
-                          )}
-                          {activity.type === "milestone_reached" && (
-                            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                          )}
+                  {campaign ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                        <div>
+                          <p className="text-sm font-medium">{campaign.title}</p>
+                          <p className="text-xs text-muted-foreground">{campaign.category}</p>
                         </div>
-                        <div className="min-w-0">
-                          {activity.type === "donation_received" && (
-                            <>
-                              <p className="text-sm">
-                                <span className="font-medium">{activity.from}</span> donated{" "}
-                                <span className="text-success font-medium">
-                                  {(activity.amount! / 1000000).toLocaleString()} STX
-                                </span>
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {activity.campaign}
-                              </p>
-                            </>
-                          )}
-                          {activity.type === "donation_made" && (
-                            <>
-                              <p className="text-sm">
-                                You donated{" "}
-                                <span className="text-accent font-medium">
-                                  {(activity.amount! / 1000000).toLocaleString()} STX
-                                </span>
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                to {activity.to}
-                              </p>
-                            </>
-                          )}
-                          {activity.type === "milestone_reached" && (
-                            <>
-                              <p className="text-sm">
-                                Milestone reached:{" "}
-                                <span className="text-primary font-medium">
-                                  {activity.milestone}
-                                </span>
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {activity.campaign}
-                              </p>
-                            </>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {activity.time}
+                        <Badge variant={campaign.isActive ? "default" : "secondary"}>
+                          {campaign.isActive ? "Active" : "Ended"}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Goal</p>
+                          <p className="text-sm font-semibold text-primary">
+                            {(campaign.goal / 1000000).toLocaleString()} STX
                           </p>
                         </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Raised</p>
+                          <p className="text-sm font-semibold text-success">
+                            {(campaign.raised / 1000000).toLocaleString()} STX
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Donors</p>
+                          <p className="text-sm font-semibold">{campaign.donorCount}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Days Left</p>
+                          <p className="text-sm font-semibold">{campaign.daysLeft}</p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+
+                      <Link to={`/campaign/${campaign.id}`} className="block">
+                        <Button variant="outline" className="w-full">
+                          View Campaign
+                          <ArrowUpRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-sm text-muted-foreground">
+                        No active campaigns found
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
