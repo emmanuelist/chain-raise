@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { CampaignCard } from "@/components/campaigns/CampaignCard";
-import { mockCampaigns } from "@/lib/mockData";
+import { useCampaign } from "@/hooks/useCampaign";
 import { ScrollReveal } from "@/hooks/useScrollReveal";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { MagneticButton } from "@/components/ui/magnetic-button";
@@ -28,13 +28,6 @@ import {
   Globe,
   Layers
 } from "lucide-react";
-
-const stats = [
-  { label: "Total Raised", value: 287500, suffix: " STX", icon: TrendingUp },
-  { label: "Active Campaigns", value: 42, suffix: "", icon: Rocket },
-  { label: "Total Donors", value: 3847, suffix: "", icon: Users },
-  { label: "Success Rate", value: 78, suffix: "%", icon: Shield },
-];
 
 const features = [
   {
@@ -118,10 +111,19 @@ const howItWorks = [
 ];
 
 export default function Index() {
-  const featuredCampaigns = mockCampaigns.slice(0, 3);
+  const { campaign, loading } = useCampaign();
+  const featuredCampaigns = campaign ? [campaign] : [];
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 1], [0, -100]);
   const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+
+  // Calculate stats from blockchain data
+  const stats = [
+    { label: "Total Raised", value: campaign ? Math.floor(campaign.raised / 1000000) : 0, suffix: " STX", icon: TrendingUp },
+    { label: "Active Campaigns", value: campaign?.isActive ? 1 : 0, suffix: "", icon: Rocket },
+    { label: "Total Donors", value: campaign?.donorCount || 0, suffix: "", icon: Users },
+    { label: "Funding Progress", value: campaign ? Math.min(Math.floor((campaign.raised / campaign.goal) * 100), 100) : 0, suffix: "%", icon: Shield },
+  ];
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
