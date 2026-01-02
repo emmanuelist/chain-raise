@@ -38,7 +38,7 @@ export default function CampaignDetail() {
   const { campaign, loading: isLoading, error } = useCampaign();
   const { milestones, loading: milestonesLoading } = useMilestones(campaign?.milestoneCount || 0);
   const { donate, isSubmitting, error: donateError } = useDonate();
-  const { address, connected } = useWallet();
+  const { address, isConnected } = useWallet();
 
   // Show error if blockchain fetch fails
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function CampaignDetail() {
   const formattedRaised = campaign ? formatStx(campaign.raised) : "0";
 
   const handleDonate = async () => {
-    if (!connected) {
+    if (!isConnected) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -144,9 +144,9 @@ export default function CampaignDetail() {
                 {/* Category & Status */}
                 <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-1.5 sm:gap-2">
                   <Badge variant="outline" className="bg-card/80 backdrop-blur-sm text-xs sm:text-sm">
-                    {campaign.category}
+                    {campaign?.category || 'Campaign'}
                   </Badge>
-                  {campaign.isActive ? (
+                  {campaign?.isActive ? (
                     <Badge className="bg-success/20 text-success border border-success/30 text-xs sm:text-sm">
                       Active
                     </Badge>
@@ -177,17 +177,17 @@ export default function CampaignDetail() {
               {/* Title & Creator */}
               <div>
                 <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3">
-                  {campaign.title}
+                  {campaign?.title || 'Campaign'}
                 </h1>
                 <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                   <span>Created by</span>
                   <a
-                    href={`https://explorer.hiro.so/address/${campaign.creator}?chain=testnet`}
+                    href={`https://explorer.hiro.so/address/${campaign?.creator || ''}?chain=testnet`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline flex items-center gap-1"
                   >
-                    {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}
+                    {campaign?.creator ? `${campaign.creator.slice(0, 6)}...${campaign.creator.slice(-4)}` : 'Loading...'}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
@@ -200,7 +200,7 @@ export default function CampaignDetail() {
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                   <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
-                    {campaign.description}
+                    {campaign?.description || 'Loading campaign details...'}
                   </p>
                   <p className="text-muted-foreground leading-relaxed mt-3 sm:mt-4 text-sm sm:text-base">
                     This campaign represents a significant step forward in bringing decentralized solutions to real-world problems. Our team has been working tirelessly to ensure that every milestone is achievable and every fund is used transparently.
@@ -333,27 +333,27 @@ export default function CampaignDetail() {
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 sm:mb-1">
                         <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
-                      <div className="font-semibold text-sm sm:text-base">{campaign.donorCount}</div>
+                      <div className="font-semibold text-sm sm:text-base">{campaign?.donorCount || 0}</div>
                       <div className="text-[10px] sm:text-xs text-muted-foreground">Donors</div>
                     </div>
                     <div className="text-center p-2 sm:p-3 rounded-lg bg-secondary/50">
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 sm:mb-1">
                         <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
-                      <div className="font-semibold text-sm sm:text-base">{campaign.daysLeft}</div>
+                      <div className="font-semibold text-sm sm:text-base">{campaign?.daysLeft || 0}</div>
                       <div className="text-[10px] sm:text-xs text-muted-foreground">Days Left</div>
                     </div>
                     <div className="text-center p-2 sm:p-3 rounded-lg bg-secondary/50">
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 sm:mb-1">
                         <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
-                      <div className="font-semibold text-sm sm:text-base">{campaign.milestoneCount}</div>
+                      <div className="font-semibold text-sm sm:text-base">{campaign?.milestoneCount || 0}</div>
                       <div className="text-[10px] sm:text-xs text-muted-foreground">Milestones</div>
                     </div>
                   </div>
 
                   {/* Donation Form */}
-                  {campaign.isActive ? (
+                  {campaign?.isActive ? (
                     <div className="space-y-3 sm:space-y-4">
                       <div>
                         <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">
@@ -386,10 +386,10 @@ export default function CampaignDetail() {
                         variant="gradient"
                         className="w-full h-10 sm:h-12 text-sm sm:text-base"
                         onClick={handleDonate}
-                        disabled={isSubmitting || !connected}
+                        disabled={isSubmitting || !isConnected}
                       >
                         <Wallet className="h-4 w-4" />
-                        {isSubmitting ? "Processing..." : connected ? "Donate Now" : "Connect Wallet"}
+                        {isSubmitting ? "Processing..." : isConnected ? "Donate Now" : "Connect Wallet"}
                       </Button>
 
                       <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
