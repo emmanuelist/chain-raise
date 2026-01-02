@@ -82,8 +82,8 @@ plan:
     - id: 1
       transactions:
         - emulated-contract-publish:
-            contract-name: chain-raise
+            contract-name: chain-raise-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/chain-raise.clar
+            path: contracts/chain-raise-v2.clar
             clarity-version: 3
       epoch: "3.2"
