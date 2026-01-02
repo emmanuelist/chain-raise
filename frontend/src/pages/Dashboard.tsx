@@ -37,18 +37,39 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { address, connected } = useWallet();
+  const { address, isConnected } = useWallet();
   const { campaign, loading: campaignLoading } = useCampaign();
   const { contribution, loading: contributionLoading } = useDonorContribution(address || "");
+  const [localCampaignData, setLocalCampaignData] = useState<any>(null);
   
   const isLoading = campaignLoading || contributionLoading;
 
-  // Show wallet connection prompt if not connected
+  // Check for locally created campaign data
   useEffect(() => {
-    if (!connected) {
+    const storedCampaign = localStorage.getItem('created-campaign');
+    if (storedCampaign) {
+      try {
+        const data = JSON.parse(storedCampaign);
+        setLocalCampaignData(data);
+        // Show success message once
+        if (!sessionStorage.getItem('campaign-message-shown')) {
+          toast.success("Campaign details loaded", {
+            description: `${data.title} - Goal: ${(data.goal / 1000000).toFixed(0)} STX`
+          });
+          sessionStorage.setItem('campaign-message-shown', 'true');
+        }
+      } catch (e) {
+        console.error('Failed to parse campaign data:', e);
+      }
+    }
+  }, []);
+
+  // Show wallet connection prompt if not connected  
+  useEffect(() => {
+    if (!isConnected) {
       toast.info("Connect your wallet to view your dashboard");
     }
-  }, [connected]);
+  }, [isConnected]);
 
   // User stats based on blockchain data
   const userStats = {
@@ -306,7 +327,7 @@ export default function Dashboard() {
                 </TabsContent>
 
                 <TabsContent value="donations" className="space-y-3 sm:space-y-4">
-                  {connected && contribution && (contribution.stx > 0 || contribution.sbtc > 0) ? (
+                  {isConnected && contribution && (contribution.stx > 0 || contribution.sbtc > 0) ? (
                     <Card className="glass-card">
                       <CardContent className="p-4 sm:p-5 lg:p-6">
                         <div className="flex items-center justify-between">
@@ -345,7 +366,7 @@ export default function Dashboard() {
                         <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="font-heading text-lg font-semibold mb-2">No Donations Yet</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          {connected 
+                          {isConnected 
                             ? "Start supporting campaigns to see your donation history here."
                             : "Connect your wallet to view your donations."
                           }
@@ -424,6 +445,83 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Locally Created Campaign Draft */}
+              {localCampaignData && (
+                <Card className="glass-card mt-4">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Rocket className="h-5 w-5 text-accent" />
+                      Campaign Draft
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Campaign details you submitted (demo mode)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium">{localCampaignData.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {localCampaignData.description}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {localCampaignData.category}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Goal</p>
+                          <p className="text-sm font-semibold text-primary">
+                            {(localCampaignData.goal / 1000000).toLocaleString()} STX
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Duration</p>
+                          <p className="text-sm font-semibold">{localCampaignData.duration} days</p>
+                        </div>
+                      </div>
+
+                      {localCampaignData.milestones?.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-xs font-medium mb-2">Milestones ({localCampaignData.milestones.length})</p>
+                          <div className="space-y-1">
+                            {localCampaignData.milestones.slice(0, 2).map((m: any, i: number) => (
+                              <div key={i} className="flex justify-between text-xs">
+                                <span className="text-muted-foreground truncate flex-1">{m.title}</span>
+                                <span className="font-medium ml-2">{m.amount} STX</span>
+                              </div>
+                            ))}
+                            {localCampaignData.milestones.length > 2 && (
+                              <p className="text-xs text-muted-foreground">
+                                +{localCampaignData.milestones.length - 2} more
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        onClick={() => {
+                          localStorage.removeItem('created-campaign');
+                          sessionStorage.removeItem('campaign-message-shown');
+                          setLocalCampaignData(null);
+                          toast.info("Campaign draft cleared");
+                        }}
+                      >
+                        Clear Draft
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
           </SkeletonTransition>
