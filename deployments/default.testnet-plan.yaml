@@ -36,10 +36,10 @@ plan:
     - id: 1
       transactions:
         - contract-publish:
-            contract-name: chain-raise
+            contract-name: chain-raise-v2
             expected-sender: STHB047A30W99178TR7KE0784C2GV2206H98PPY
-            cost: 194160
-            path: contracts/chain-raise.clar
+            cost: 164640
+            path: contracts/chain-raise-v2.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.2"
