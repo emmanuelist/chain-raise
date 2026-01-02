@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useWallet } from "@/hooks/useWallet";
 import { 
   Rocket, 
   Plus, 
@@ -45,8 +46,16 @@ interface Beneficiary {
 
 export default function CreateCampaign() {
   const navigate = useNavigate();
+  const { isConnected } = useWallet();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check wallet connection on mount
+  useEffect(() => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet to create a campaign");
+    }
+  }, [isConnected]);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -106,6 +115,12 @@ export default function CreateCampaign() {
   };
 
   const handleSubmit = async () => {
+    // Check wallet connection
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     // Final validation
     if (!title.trim() || !description.trim() || !category || !goal) {
       toast.error("Please complete all required fields");
@@ -120,13 +135,35 @@ export default function CreateCampaign() {
 
     setIsSubmitting(true);
     
-    // Simulate transaction
-    toast.loading("Submitting transaction to blockchain...");
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    toast.dismiss();
-    
-    toast.success("Campaign created successfully! Redirecting to dashboard...");
-    setTimeout(() => navigate("/dashboard"), 1500);
+    try {
+      // Note: Current contract supports single campaign (admin-only initialization)
+      // This simulates the campaign creation flow
+      toast.loading("Submitting transaction to blockchain...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.dismiss();
+      
+      // Store campaign details locally for demo purposes
+      const campaignData = {
+        title,
+        description,
+        category,
+        goal: parseFloat(goal) * 1000000, // Convert to microSTX
+        duration: parseInt(duration),
+        milestones: milestones.filter(m => m.title && m.amount),
+        beneficiaries: beneficiaries.filter(b => b.address && b.percentage),
+        createdAt: Date.now()
+      };
+      
+      localStorage.setItem('created-campaign', JSON.stringify(campaignData));
+      
+      toast.success("Campaign details saved! View the existing campaign on dashboard.");
+      setTimeout(() => navigate("/dashboard"), 1500);
+    } catch (error) {
+      toast.error("Failed to create campaign");
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const steps = [
