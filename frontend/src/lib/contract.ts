@@ -12,7 +12,10 @@ import { openContractCall } from '@stacks/connect';
 
 // Contract deployment details
 export const CONTRACT_ADDRESS = 'STHB047A30W99178TR7KE0784C2GV2206H98PPY';
-export const CONTRACT_NAME = 'chain-raise';
+export const CONTRACT_NAME = 'chain-raise-v2';
+
+// For V2: We'll default to campaign ID 1 (or latest) for compatibility
+export const DEFAULT_CAMPAIGN_ID = 1;
 
 // Network configuration
 export const getNetwork = (network: 'mainnet' | 'testnet' = 'testnet') => {
@@ -42,47 +45,76 @@ export interface CampaignData {
 }
 
 // Read-only functions
-export async function getCampaignInfo(
-  network: 'mainnet' | 'testnet' = 'testnet'
-): Promise<CampaignData | null> {
+
+/**
+ * Get campaign count from V2 contract
+ */
+async function getCampaignCount(network: 'mainnet' | 'testnet' = 'testnet'): Promise<number> {
   try {
     const result = await fetchCallReadOnlyFunction({
       contractAddress: CONTRACT_ADDRESS,
       contractName: CONTRACT_NAME,
-      functionName: 'get-campaign-info',
+      functionName: 'get-campaign-count',
       functionArgs: [],
       network: getNetwork(network),
       senderAddress: CONTRACT_ADDRESS,
     });
+    return Number(cvToJSON(result).value?.value || 0);
+  } catch (err) {
+    console.error('Error fetching campaign count:', err);
+    return 0;
+  }
+}
 
-    const data = cvToJSON(result).value;
+/**
+ * Get campaign info - V2 bridge (gets latest campaign or campaign #1)
+ */
+export async function getCampaignInfo(
+  network: 'mainnet' | 'testnet' = 'testnet'
+): Promise<CampaignData | null> {
+  try {
+    // Get campaign count to find latest, or default to campaign #1
+    const count = await getCampaignCount(network);
+    const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: CONTRACT_NAME,
+      functionName: 'get-campaign',
+      functionArgs: [uintCV(campaignId)],
+      network: getNetwork(network),
+      senderAddress: CONTRACT_ADDRESS,
+    });
+
+    const jsonResult = cvToJSON(result);
+    const data = jsonResult.value;
     
     if (!data) return null;
 
+    // Transform V2 response to match V1 CampaignData interface
     return {
-      isInitialized: true, // If we got data, it's initialized
-      isCancelled: data.isCancelled?.value || false,
-      isPaused: data.isPaused?.value || false,
-      beneficiary: data.beneficiary?.value || CONTRACT_ADDRESS,
-      campaignStart: Number(data.start?.value || 0),
-      campaignGoal: Number(data.goal?.value || 0),
-      campaignDuration: Number(data.end?.value || 0) - Number(data.start?.value || 0),
-      totalStx: Number(data.totalStx?.value || 0),
-      totalSbtc: Number(data.totalSbtc?.value || 0),
-      donationCount: Number(data.donationCount?.value || 0),
-      isWithdrawn: data.isWithdrawn?.value || false,
-      title: data.title?.value || '',
-      description: data.description?.value || '',
-      category: data.category?.value || '',
-      minDonationStx: 1000000, // Default 1 STX
-      maxDonationStx: 100000000000, // Default 100k STX
-      beneficiaryCount: Number(data.beneficiaryCount?.value || 0),
-      milestoneCount: Number(data.milestoneCount?.value || 0),
-    };
-  } catch (err) {
-    console.error('Error fetching campaign info:', err);
-    return null;
-  }
+    // Get campaign count to find latest campaign
+    const count = await getCampaignCount(network);
+    const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: CONTRACT_NAME,
+      functionName: 'get-donor-contribution',
+      functionArgs: [uintCV(campaignId), standardPrincipalCV(donor)],
+      network: getNetwork(network),
+      senderAddress: CONTRACT_ADDRESS,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (jsonResult.value?.value) {
+      const data = jsonResult.value.value;
+      return {
+        stx: Number(data.stx?.value || 0),
+        sbtc: Number(data.sbtc?.value || 0),
+      };
+    }
+    return { stx: 0, sbtc: 0
 }
 
 export async function getDonorContribution(
@@ -129,11 +161,15 @@ export async function getMilestone(
 } | null> {
   try {
     const result = await fetchCallReadOnlyFunction({
+    // Get latest campaign
+    const count = await getCampaignCount(network);
+    const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+    const result = await fetchCallReadOnlyFunction({
       contractAddress: CONTRACT_ADDRESS,
       contractName: CONTRACT_NAME,
       functionName: 'get-milestone',
-      functionArgs: [uintCV(milestoneId)],
-      network: getNetwork(network),
+      functionArgs: [uintCV(campaignId), work(network),
       senderAddress: CONTRACT_ADDRESS,
     });
 
@@ -150,10 +186,11 @@ export async function getMilestone(
   } catch (error) {
     console.error('Error fetching milestone:', error);
     return null;
-  }
-}
 
-// Write functions (requires wallet signature)
+/**
+ * V2 Note: initializeCampaign is now createCampaign in V2
+ * This function is for backward compatibility
+ */
 export async function initializeCampaign(
   goal: number,
   duration: number,
@@ -164,21 +201,33 @@ export async function initializeCampaign(
   onFinish?: (data: any) => void,
   onCancel?: () => void
 ) {
+  // V2 uses create-campaign function
   return await openContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
-    functionName: 'initialize-campaign',
+    functionName: 'create-campaign',
     functionArgs: [
+      stringAsciiCV(title.substring(0, 100)),
+      stringUtf8CV(description.substring(0, 500)),
+      stringAsciiCV(category.substring(0, 50)),
+      stringAsciiCV('https://images.unsplash.com/photo-1639762681485-074b7f938ba0'), // Default image
       uintCV(goal),
+      uintCV(duration),
+      uintCV(1000000), // 1 STX min
+      uintCV(100000000000), // 100k STX max
       uintCV(duration),
       stringAsciiCV(title),
       stringUtf8CV(description),
       stringAsciiCV(category),
-    ],
-    network: getNetwork(network),
-    onFinish,
-    onCancel,
-  });
+  // V2 requires campaign ID - use latest campaign
+  const count = await getCampaignCount(network);
+  const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+  return await openContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'donate-stx',
+    functionArgs: [uintCV(campaignId), 
 }
 
 export async function donateStx(
@@ -190,11 +239,15 @@ export async function donateStx(
   return await openContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
-    functionName: 'donate-stx',
-    functionArgs: [uintCV(amount)],
-    network: getNetwork(network),
-    onFinish,
-    onCancel,
+  // V2 requires campaign ID
+  const count = await getCampaignCount(network);
+  const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+  return await openContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'cancel-campaign',
+    functionArgs: [uintCV(campaignId)
   });
 }
 
@@ -211,11 +264,15 @@ export async function cancelCampaign(
     network: getNetwork(network),
     onFinish,
     onCancel,
-  });
-}
+  // V2 requires campaign ID and uses 'withdraw-funds' function
+  const count = await getCampaignCount(network);
+  const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
 
-export async function withdrawFunds(
-  network: 'mainnet' | 'testnet' = 'testnet',
+  return await openContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'withdraw-funds',
+    functionArgs: [uintCV(campaignId)' | 'testnet' = 'testnet',
   onFinish?: (data: any) => void,
   onCancel?: () => void
 ) {
@@ -223,11 +280,15 @@ export async function withdrawFunds(
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
     functionName: 'withdraw',
-    functionArgs: [],
-    network: getNetwork(network),
-    onFinish,
-    onCancel,
-  });
+  // V2 requires campaign ID and uses 'request-refund' function
+  const count = await getCampaignCount(network);
+  const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
+
+  return await openContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'request-refund',
+    functionArgs: [uintCV(campaignId)
 }
 
 export async function refundDonation(
@@ -241,11 +302,15 @@ export async function refundDonation(
     functionName: 'refund',
     functionArgs: [],
     network: getNetwork(network),
-    onFinish,
-    onCancel,
-  });
-}
+  // V2 requires campaign ID
+  const count = await getCampaignCount(network);
+  const campaignId = count > 0 ? count : DEFAULT_CAMPAIGN_ID;
 
+  return await openContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'add-milestone',
+    functionArgs: [uintCV(campaignId), 
 export async function addMilestone(
   amount: number,
   description: string,
